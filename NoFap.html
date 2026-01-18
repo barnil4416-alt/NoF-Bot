@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NoFap Challenge</title>
+
+<style>
+body {
+  margin: 0;
+  height: 100vh;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(270deg,#ff512f,#dd2476,#24c6dc,#514a9d);
+  background-size: 600% 600%;
+  animation: gradient 12s ease infinite;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+
+@keyframes gradient {
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+
+.card {
+  width: 380px;
+  padding: 25px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  animation: fade 0.8s;
+}
+
+@keyframes fade {
+  from {opacity:0; transform: scale(0.95);}
+  to {opacity:1; transform: scale(1);}
+}
+
+h1,h2 { text-align:center; }
+
+input, button {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+}
+
+button {
+  background: #00ffd5;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button.red {
+  background: #ff4d4d;
+  color: white;
+}
+
+button.gray {
+  background: #ccc;
+}
+
+.hidden { display:none; }
+
+.menu button {
+  margin-top: 12px;
+}
+
+.days {
+  font-size: 60px;
+  text-align: center;
+}
+
+.timer {
+  text-align: center;
+  font-size: 18px;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.quote {
+  text-align: center;
+  font-style: italic;
+  margin-bottom: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div class="card" id="login">
+  <h1>🔥 NoFap Login</h1>
+  <input id="name" placeholder="Name">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">Enter</button>
+</div>
+
+<!-- HOME -->
+<div class="card hidden" id="home">
+  <h2 id="welcome"></h2>
+  <div class="quote" id="quote"></div>
+
+  <div class="menu">
+    <button onclick="openPage('streak')">▶️ Start Streak</button>
+    <button onclick="openPage('history')">📊 Streak History</button>
+    <button onclick="openPage('motivation')">💬 Motivation</button>
+    <button class="red" onclick="relapse()">🔁 Relapse</button>
+  </div>
+</div>
+
+<!-- STREAK PAGE -->
+<div class="card hidden" id="streak">
+  <h2>🔥 Current Streak</h2>
+  <div class="days" id="days">0</div>
+  <p style="text-align:center;">Days Clean 💪</p>
+
+  <div class="timer" id="timer">⏱️ 0d 00h 00m 00s</div>
+
+  <button onclick="startStreak()">Start Streak</button>
+  <button class="gray" onclick="goHome()">⬅ Back</button>
+</div>
+
+<!-- HISTORY PAGE -->
+<div class="card hidden" id="history">
+  <h2>📊 Streak History</h2>
+  <div id="historyList"></div>
+  <button class="gray" onclick="goHome()">⬅ Back</button>
+</div>
+
+<!-- MOTIVATION PAGE -->
+<div class="card hidden" id="motivation">
+  <h2>💬 Motivation</h2>
+  <div class="quote" id="motivationText"></div>
+  <button onclick="newQuote()">New Quote 🔄</button>
+  <button class="gray" onclick="goHome()">⬅ Back</button>
+</div>
+
+<script>
+const quotes = [
+ "Discipline is freedom 💪",
+ "Urges pass. Regret stays 😤",
+ "You are building a monster mindset 🧠",
+ "Every clean day = a win 🏆",
+ "Your future self is proud of you 🔥",
+ "Control yourself, control life 👑"
+];
+
+let timerInterval = null;
+
+function randomQuote() {
+ return quotes[Math.floor(Math.random()*quotes.length)];
+}
+
+function login() {
+ const name = nameInput.value;
+ const pass = password.value;
+
+ if (!pass) return alert("Password required");
+
+ if (!localStorage.getItem("password")) {
+   if (!name) return alert("Name required first time");
+   localStorage.setItem("name", name);
+   localStorage.setItem("password", pass);
+ } else {
+   if (pass !== localStorage.getItem("password"))
+     return alert("Wrong password");
+ }
+
+ showHome();
+}
+
+function showHome() {
+ loginDiv.classList.add("hidden");
+ home.classList.remove("hidden");
+ welcome.innerText = "Welcome, " + localStorage.getItem("name") + " 💪";
+ quote.innerText = randomQuote();
+ updateTimer();
+}
+
+function openPage(id) {
+ document.querySelectorAll('.card').forEach(c=>c.classList.add("hidden"));
+ document.getElementById(id).classList.remove("hidden");
+
+ if (id === "history") loadHistory();
+ if (id === "motivation") newQuote();
+ if (id === "streak") updateTimer();
+}
+
+function goHome() {
+ document.querySelectorAll('.card').forEach(c=>c.classList.add("hidden"));
+ home.classList.remove("hidden");
+}
+
+function startStreak() {
+ if (localStorage.getItem("startTime")) {
+   alert("Streak already running 🔥");
+   return;
+ }
+ localStorage.setItem("startTime", Date.now());
+ startLiveTimer();
+}
+
+function updateTimer() {
+ const start = localStorage.getItem("startTime");
+ if (!start) {
+   days.innerText = 0;
+   timer.innerText = "⏱️ 0d 00h 00m 00s";
+   return;
+ }
+
+ const diff = Date.now() - start;
+
+ const d = Math.floor(diff / 86400000);
+ const h = Math.floor((diff % 86400000) / 3600000);
+ const m = Math.floor((diff % 3600000) / 60000);
+ const s = Math.floor((diff % 60000) / 1000);
+
+ days.innerText = d;
+ timer.innerText = `⏱️ ${d}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+}
+
+function startLiveTimer() {
+ if (timerInterval) clearInterval(timerInterval);
+ timerInterval = setInterval(updateTimer, 1000);
+}
+
+function relapse() {
+ if (!localStorage.getItem("startTime"))
+   return alert("No active streak");
+
+ if (!confirm("Confirm relapse? 😞")) return;
+
+ const history = JSON.parse(localStorage.getItem("history") || "[]");
+ history.push({
+   days: days.innerText,
+   date: new Date().toLocaleString()
+ });
+
+ localStorage.setItem("history", JSON.stringify(history));
+ localStorage.removeItem("startTime");
+
+ clearInterval(timerInterval);
+ timerInterval = null;
+
+ updateTimer();
+ alert("Streak stopped. Restart stronger 💪");
+}
+
+function loadHistory() {
+ const history = JSON.parse(localStorage.getItem("history") || "[]");
+ historyList.innerHTML = history.length
+   ? history.map(h => `🔥 ${h.days} days — ${h.date}`).join("<br>")
+   : "No history yet";
+}
+
+function newQuote() {
+ motivationText.innerText = randomQuote();
+}
+
+/* INIT */
+const nameInput = document.getElementById("name");
+const password = document.getElementById("password");
+const loginDiv = document.getElementById("login");
+
+if (localStorage.getItem("password")) {
+ nameInput.style.display = "none";
+}
+
+if (localStorage.getItem("startTime")) {
+ startLiveTimer();
+}
+</script>
+
+</body>
+</html>
